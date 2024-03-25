@@ -4,7 +4,7 @@ from constants import *
 import numpy
 from random import randint, choice
 import math
-
+from algorithms import *
 
 class Task(object):
     # Always terminates with either success (True) or failure (False)
@@ -51,9 +51,45 @@ class GhostClose(Task):
     def run(self):
         _, d = self.pac.closestGhostAndDistance()
         if d < 100:
+            print("Ghost close TRUE")
             return True
         else:
             False
+
+class BerserkMode(Task):
+    def __init__(self, pac) -> None:
+        self.pac = pac
+    
+    def run(self):
+        for ghost in self.pac.ghosts:
+            if ghost.mode.current == FREIGHT:
+                print("Berserk Mode TRUE")
+                return True
+        return False
+
+class Kill(Task):
+    def __init__(self, pac) -> None:
+        self.pac = pac
+    
+    def run(self):
+        self.pac.directionMethod = self.kill
+        return True
+    
+    def kill(self, directions):
+        print(f"Trying to kill")
+        distances = []
+        g, _ = self.pac.closestGhostAndDistance()
+        for direction in directions:
+            vec = (
+                g.position
+                - self.pac.node.position
+                + self.pac.directions[direction] * TILEWIDTH
+            )
+            distances.append(vec.magnitudeSquared())
+            
+        index = distances.index(max(distances))
+        return directions[index]
+
 
 class Flee(Task):
     def __init__(self, pac) -> None:
@@ -64,7 +100,7 @@ class Flee(Task):
         return True
 
     def flee(self, directions):
-        print(f"Trying to flee")
+        print("Trying to flee")
         distances = []
         g, _ = self.pac.closestGhostAndDistance()
         for direction in directions:
@@ -94,6 +130,7 @@ class Wander(Task):
 
     def run(self):
         self.pac.directionMethod = self.wanderBiased
+        print(f"Trying to wander: {True}")
         return True
 
     def randomDirection(self, directions):
@@ -116,6 +153,45 @@ class Wander(Task):
                     return choice(directions)
         else:
             return self.wanderRandom(directions)
+
+
+class GetPowerPellets(Task):
+    def __init__(self, pac) -> None:
+        self.pac = pac
+        self.pp = self.pac.pp
+
+    def run(self):
+        closestPellet, _ = self.pac.closestPelletWithNode()
+        if(closestPellet == None):
+            return False
+        self.pac.directionMethod = self.seek
+        print("Trying to get power pellet")
+        return True
+
+    def seek(self, directions):
+        # Dijkstra from pacman to pellets
+        pacmanTarget = self.pac.target        
+        previous_nodes = non_fucked_dijkstra(self.pac.nodes, pacmanTarget)
+        closestPellet, _ = self.pac.closestPelletWithNode()
+
+        pp_node = self.pac.nodes.getNodeFromPixels(closestPellet.position.x, closestPellet.position.y)
+        path = []
+        prev = pp_node
+        while(prev != None):
+            path.append(prev)
+            prev = previous_nodes[prev]
+        list.reverse(path)
+        
+        if len(path) == 0:
+            return directions[0]
+
+        direction = directions[0]
+
+        for nDir in directions:
+            node = pacmanTarget.neighbors[nDir]
+            if node in path:
+                direction = nDir
+        return direction
 
 class EnemyNear(Task):
     def __init__(self, distanceToEnemy):

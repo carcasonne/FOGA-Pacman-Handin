@@ -1,5 +1,43 @@
 import sys
 
+from dataclasses import dataclass, field
+from typing import Any
+from queue import PriorityQueue
+
+@dataclass(order=True)
+class PrioritizedItem:
+    priority: int
+    item: Any=field(compare=False)
+
+# Shortest path from source to every other node
+def non_fucked_dijkstra(nodes, start_node):
+    distTo = {}
+    prevNode = {}
+    max_value = sys.maxsize
+
+    for node in nodes.nodesLUT.values():
+        distTo[node] = max_value
+        prevNode[node] = None
+    distTo[start_node] = 0.0
+
+    pq = PriorityQueue()
+    pq.put(PrioritizedItem(0.0, start_node))
+
+    while(pq.qsize() != 0):
+        #print(pq.qsize())
+        popped = pq.get()
+        v = popped.item
+        neighs = nodes.get_real_neighbors(v)
+        for w in neighs:
+            length = (w.position - v.position).magnitudeSquared()
+            #print(f"v: {v}, w: {w}")
+            if(distTo[w] > distTo[v] + length):
+                #print(f"dist to w: {distTo[w]}, to v: {distTo[v]}, lenght beteen: {length}")
+                distTo[w] = distTo[v] + length
+                prevNode[w] = v
+                pq.put(PrioritizedItem(distTo[w], w)) # not optimal
+
+    return prevNode
 
 def dijkstra(nodes, start_node):
     unvisited_nodes = list(nodes.costs)
@@ -80,6 +118,10 @@ def dijkstra_or_a_star(nodes, start_node, a_star=False):
                 current_min_node = node
 
         neighbors = nodes.getNeighbors(current_min_node)
+
+        #print(f"Min mode = {current_min_node}")
+        #print(f" nei = {neighbors}")
+
         for neighbor in neighbors:
             if a_star:
                 tentative_value = shortest_path[current_min_node] + heuristic(
@@ -87,10 +129,13 @@ def dijkstra_or_a_star(nodes, start_node, a_star=False):
                 )
             else:
                 tentative_value = shortest_path[current_min_node] + 1
-            if tentative_value < shortest_path[neighbor]:
-                shortest_path[neighbor] = tentative_value
-                # We also update the best path to the current node
-                previous_nodes[neighbor] = current_min_node
+            try:
+                if tentative_value < shortest_path[neighbor]:
+                    shortest_path[neighbor] = tentative_value
+                    # We also update the best path to the current node
+                    previous_nodes[neighbor] = current_min_node
+            except:
+                print("whoops")
 
         # After visiting its neighbors, we mark the node as "visited"
         unvisited_nodes.remove(current_min_node)

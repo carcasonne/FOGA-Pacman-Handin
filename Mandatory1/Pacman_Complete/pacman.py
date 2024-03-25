@@ -8,7 +8,7 @@ from behaviourTree import *
 from random import randint, choice
 
 class Pacman(Entity):
-    def __init__(self, node):
+    def __init__(self, node, powerpellets, pellets, nodes):
         Entity.__init__(self, node)
         self.name = PACMAN    
         self.color = YELLOW
@@ -16,8 +16,11 @@ class Pacman(Entity):
         self.setBetweenNodes(LEFT)
         self.alive = True
         self.sprites = PacmanSprites(self)
+        self.pp = powerpellets
+        self.pellets = pellets
         # Ghosts and pacman have recursive constructors
         self.ghosts = None
+        self.nodes = nodes
 
     def updateGhosts(self, ghosts):
         self.ghosts = ghosts
@@ -73,7 +76,10 @@ class Pacman(Entity):
     def behaviorTree(self):
         top_node = Selector(
             [
-                Sequence([GhostClose(self), Flee(self)]),
+                Sequence([Kill(self)]),
+                #Sequence([BerserkMode(self), Kill(self)]),
+                #Sequence([GhostClose(self), Flee(self)]),
+                #Sequence([GetPowerPellets(self)]),
                 Wander(self)
             ]
         )
@@ -141,3 +147,18 @@ class Pacman(Entity):
                 closestGhost = self.ghosts[i]
                 closestDistance = dist
         return (closestGhost, closestDistance)
+    
+    def closestPelletWithNode(self):
+        closestPellets = None
+        closestDistance = 99999
+        for i in range(len(self.pp)):
+            node = self.nodes.getNodeFromPixels(self.pp[i].position.x, self.pp[i].position.y)
+            if (self.pp[i] not in self.pellets or 
+                node == None):
+                continue
+            distV = self.position - self.pp[i].position
+            dist = distV.magnitude()
+            if dist < closestDistance:
+                closestPellets = self.pp[i]
+                closestDistance = dist
+        return (closestPellets, closestDistance)
