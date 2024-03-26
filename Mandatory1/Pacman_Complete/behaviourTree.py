@@ -107,7 +107,6 @@ class Reverse(Task):
         self.pac = pac
 
     def run(self):
-        print("changing to getReverseDirection")
         self.pac.directionMethod = self.pac.getReverseDirection
         return True
 

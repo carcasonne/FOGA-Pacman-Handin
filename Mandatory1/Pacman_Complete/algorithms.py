@@ -10,11 +10,11 @@ class PrioritizedItem:
     item: Any=field(compare=False)
 
 # Shortest path from source to every other node
-def non_fucked_dijkstra(nodes, start_node):
+# Standard implementation following Sedgewick's
+def our_dijkstra(nodes, start_node):
     distTo = {}
     prevNode = {}
     max_value = sys.maxsize
-
     for node in nodes.nodesLUT.values():
         distTo[node] = max_value
         prevNode[node] = None
@@ -22,22 +22,16 @@ def non_fucked_dijkstra(nodes, start_node):
 
     pq = PriorityQueue()
     pq.put(PrioritizedItem(0.0, start_node))
-
-    while(pq.qsize() != 0):
-        #print(pq.qsize())
+    while pq.qsize() != 0:
         popped = pq.get()
         v = popped.item
         neighs = nodes.get_real_neighbors(v)
         for w in neighs:
-            length = (w.position - v.position).magnitudeSquared()
-            length = abs(w.position.x - v.position.x) + abs(w.position.y - v.position.y)
-            #print(f"v: {v}, w: {w}")
-            if(distTo[w] > distTo[v] + length):
-                #print(f"dist to w: {distTo[w]}, to v: {distTo[v]}, lenght beteen: {length}")
+            length = abs(w.position.x - v.position.x) + abs(w.position.y - v.position.y)  # Manhattan distance
+            if distTo[w] > distTo[v] + length:
                 distTo[w] = distTo[v] + length
                 prevNode[w] = v
-                pq.put(PrioritizedItem(distTo[w], w)) # not optimal
-
+                pq.put(PrioritizedItem(distTo[w], w))  # not optimal
     return prevNode
 
 def dijkstra(nodes, start_node):

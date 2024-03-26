@@ -23,13 +23,14 @@ class Node(object):
     def render(self, screen, pacman=None):
         for n in self.neighbors.keys():
             if self.neighbors[n] is not None:
-                line_start = self.position.asTuple()
-                line_end = self.neighbors[n].position.asTuple()
-                pygame.draw.line(screen, WHITE, line_start, line_end, 4)
-                color = RED
-                if pacman is not None and self.position == pacman.target.position:
-                    color = GREEN
-                pygame.draw.circle(screen, color, self.position.asInt(), 12)
+                if pacman is not None:
+                    line_start = self.position.asTuple()
+                    line_end = self.neighbors[n].position.asTuple()
+                    pygame.draw.line(screen, WHITE, line_start, line_end, 4)
+                    color = RED
+                    if self.position == pacman.target.position:
+                        color = GREEN
+                    pygame.draw.circle(screen, color, self.position.asInt(), 12)
 
 
 class NodeGroup(object):

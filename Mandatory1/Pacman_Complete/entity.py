@@ -55,21 +55,13 @@ class Entity(object):
     def getNewTarget(self, direction):
         if self.validDirection(direction):
             return self.node.neighbors[direction]
-        print(f"new target: {direction} not valid")
-        print(f"current direction: {self.direction}")
-        print("valid directions:")
-
         directions = []
         for key in [UP, DOWN, LEFT, RIGHT]:
             if self.validDirection(key):
-                print(f"{key} is valid")
                 if key != self.direction * -1:
                     directions.append(key)
-            else:
-                print(f"{key} is NOT valid")
         if len(directions) == 0:
             directions.append(self.direction * -1)
-
         print(directions)
 
         return self.node
