@@ -42,16 +42,36 @@ class Entity(object):
 
             self.setPosition()
           
-    def validDirection(self, direction):
+    def validDirection(self, direction, useTarget=False):
+        node = self.node
+        if useTarget:
+            node = self.target
         if direction is not STOP:
-            if self.name in self.node.access[direction]:
-                if self.node.neighbors[direction] is not None:
+            if self.name in node.access[direction]:
+                if node.neighbors[direction] is not None:
                     return True
         return False
 
     def getNewTarget(self, direction):
         if self.validDirection(direction):
             return self.node.neighbors[direction]
+        print(f"new target: {direction} not valid")
+        print(f"current direction: {self.direction}")
+        print("valid directions:")
+
+        directions = []
+        for key in [UP, DOWN, LEFT, RIGHT]:
+            if self.validDirection(key):
+                print(f"{key} is valid")
+                if key != self.direction * -1:
+                    directions.append(key)
+            else:
+                print(f"{key} is NOT valid")
+        if len(directions) == 0:
+            directions.append(self.direction * -1)
+
+        print(directions)
+
         return self.node
 
     def overshotTarget(self):

@@ -20,17 +20,16 @@ class Node(object):
         if entity.name not in self.access[direction]:
             self.access[direction].append(entity.name)
 
-    def render(self, screen):
+    def render(self, screen, pacman=None):
         for n in self.neighbors.keys():
             if self.neighbors[n] is not None:
-
-                if self.position == Vector2(16, 464):
-                    pygame.draw.circle(screen, PINK, self.position.asInt(), 36)
-
                 line_start = self.position.asTuple()
                 line_end = self.neighbors[n].position.asTuple()
                 pygame.draw.line(screen, WHITE, line_start, line_end, 4)
-                pygame.draw.circle(screen, RED, self.position.asInt(), 12)
+                color = RED
+                if pacman is not None and self.position == pacman.target.position:
+                    color = GREEN
+                pygame.draw.circle(screen, color, self.position.asInt(), 12)
 
 
 class NodeGroup(object):
@@ -164,9 +163,9 @@ class NodeGroup(object):
         for entity in entities:
             self.allowHomeAccess(entity)
 
-    def render(self, screen):
+    def render(self, screen, pacman):
         for node in self.nodesLUT.values():
-            node.render(screen)
+            node.render(screen, pacman)
     
     # Added from exercise 3
     # returns a node in (x,y) format

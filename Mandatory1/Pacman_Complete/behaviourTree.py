@@ -46,28 +46,29 @@ enemyCloseDistance = 15
 
 
 class GhostClose(Task):
-    def __init__(self, pac) -> None:
+    def __init__(self, pac, distanceThreshold) -> None:
         self.pac = pac
-        self.distanceToGhost = pac.ghosts
+        self.distanceThreshold = distanceThreshold
 
     def run(self):
         _, d = self.pac.closestGhostAndDistance()
-        if d < 110:
-            print("Ghost close TRUE")
+        if d < self.distanceThreshold:
+            # print("Ghost close TRUE")
             return True
         else:
-            False
+            return False
 
 
 class BerserkMode(Task):
-    def __init__(self, pac) -> None:
+    def __init__(self, pac, distanceThreshold) -> None:
         self.pac = pac
+        self.distanceThreshold = distanceThreshold
 
     def run(self):
-        ghost, d = self.pac.closestGhostAndDistance()
-        if ghost.mode.current == FREIGHT and d < 200:
-            print("Berserk Mode TRUE")
-            return True
+        for ghost in self.pac.ghosts:
+            dist = (self.pac.position - ghost.position).magnitude()
+            if ghost.mode.current == FREIGHT and dist < self.distanceThreshold:
+                return True
         return False
 
 
@@ -76,7 +77,6 @@ class Kill(Task):
         self.pac = pac
 
     def run(self):
-        print("Kill mode: TRUE")
         self.pac.directionMethod = self.pac.getGhostDirection
         return True
 
@@ -86,51 +86,47 @@ class Flee(Task):
         self.pac = pac
 
     def run(self):
-        print("Flee mode: TRUE")
+        # print("Flee mode: TRUE")
         self.pac.directionMethod = self.pac.getDirectionAwayFromGhosts
         return True
 
 
-class Wander(Task):
-    def __init__(self, pac):
-        self.pac = pac
-
-    def run(self):
-        self.pac.directionMethod = self.wanderBiased
-        print(f"Trying to wander: {True}")
-        return True
-
-    def randomDirection(self, directions):
-        return directions[randint(0, len(directions) - 1)]
-
-    def wanderRandom(self, directions):
-        return self.randomDirection(directions)
-
-    def wanderBiased(self, directions):
-        previousDirection = self.pac.direction
-        if previousDirection in directions:
-            nextDirProb = randint(1, 100)
-            if nextDirProb <= 50:
-                return previousDirection
-            else:
-                directions.remove(previousDirection)
-                if directions == []:
-                    return previousDirection
-                else:
-                    return choice(directions)
-        else:
-            return self.wanderRandom(directions)
-
-
-class PowerPelletClose(Task):
+class GhostWillCollide(Task):
     def __init__(self, pac) -> None:
         self.pac = pac
 
     def run(self):
+        for ghost in self.pac.ghosts:
+            if ghost.target == self.pac.target and ghost.node != self.pac.node:
+                print("noooo they will collide!!!!!!!")
+                return True
+                ghostDistance = (self.pac.target.position - ghost.position).magnitude()
+                pacmanDistance = (self.pac.target.position - self.pac.position).magnitude()
+                print(ghostDistance - pacmanDistance)
+                if ghostDistance < pacmanDistance:
+                    print("noooo they will collide!!!!!!!")
+                    return True
+        return False
+
+
+class Reverse(Task):
+    def __init__(self, pac) -> None:
+        self.pac = pac
+
+    def run(self):
+        print("changing to getReverseDirection")
+        self.pac.directionMethod = self.pac.getReverseDirection
+        return True
+
+
+class PowerPelletClose(Task):
+    def __init__(self, pac, distanceThreshold) -> None:
+        self.pac = pac
+        self.distanceThreshold = distanceThreshold
+
+    def run(self):
         p, distance = self.pac.closestPelletWithDistance(True)
-        close = distance < 120
-        print(f"Power pellet close: {close}")
-        print(distance)
+        close = distance < self.distanceThreshold
         return close
 
 
@@ -139,48 +135,16 @@ class GetPowerPellets(Task):
         self.pac = pac
 
     def run(self):
-        print("Get power pellet mode: TRUE")
+        # print("Get power pellet mode: TRUE")
         self.pac.directionMethod = self.pac.getPowerPelletDirection
         return True
+
 
 class WanderForPellets(Task):
     def __init__(self, pac) -> None:
         self.pac = pac
 
     def run(self):
-        print("Wander For Pellets: TRUE")
+        # print("Wander For Pellets: TRUE")
         self.pac.directionMethod = self.pac.getPelletDirection
         return True
-
-class GoTopLeft(Task):
-    def __init__(self, character):
-        self.character = character
-
-    def run(self):
-        topLeft = Vector2(16, 64)
-        self.character.setFlag()  # <-- FIXED FROM CODE PROVIDED
-        self.character.directionMethod = self.character.goalDirection
-        self.character.goal = topLeft
-        return True
-
-
-class Freeze(Task):
-    def __init__(self, character):
-        self.character = character
-
-    def run(self):
-        topLeft = Vector2(16, 64)
-        if (self.character.position - topLeft).magnitude() < 2:
-            self.character.freezeChar()
-        return True
-
-
-class IsFlagNotSet(Task):
-    def __init__(self, character):
-        self.character = character
-
-    def run(self):
-        if self.character.flag:
-            return False
-        else:
-            return True

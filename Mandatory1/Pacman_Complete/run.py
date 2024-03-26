@@ -260,6 +260,8 @@ class GameController(object):
         self.ghosts.render(self.screen)
         self.textgroup.render(self.screen)
 
+        self.nodes.render(self.screen, self.pacman)
+
         for i in range(len(self.lifesprites.images)):
             x = self.lifesprites.images[i].get_width() * i
             y = SCREENHEIGHT - self.lifesprites.images[i].get_height()

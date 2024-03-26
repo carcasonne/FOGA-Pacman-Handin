@@ -22,6 +22,7 @@ class Pacman(Entity):
         # Ghosts and pacman have recursive constructors
         self.ghosts = None
         self.nodes = nodes
+        self.timeSinceSwitch = 0
 
     def updateGhosts(self, ghosts):
         self.ghosts = ghosts
@@ -41,6 +42,9 @@ class Pacman(Entity):
     def update(self, dt):
         self.sprites.update(dt)
         self.position += self.directions[self.direction] * self.speed * dt
+        self.timeSinceSwitch = self.timeSinceSwitch + dt
+
+        oldTarget = self.target
 
         # direction = self.getValidKey()
         direction = self.pacmanController()
@@ -62,6 +66,12 @@ class Pacman(Entity):
             if self.oppositeDirection(direction):
                 self.reverseDirection()
 
+        if self.target != oldTarget:
+            print(f"Valid directions: {self.validDirections(useTarget=True)}")
+            print(f"Controller provided direction: {direction}")
+            print(f"Direction picked: {self.direction}")
+            print(f"Changed target to: {self.target.position}")
+
     # Returns the direction for Pacman to go
     def pacmanController(self):
         if not self.alive:
@@ -70,19 +80,23 @@ class Pacman(Entity):
         # Update behaviour for pacman to follow
         self.behaviorTree()
 
-        validDirections = self.validDirections()
+        # print(self.directionMethod.__name__)
+
+        validDirections = self.validDirections(useTarget=True)
         direction = self.directionMethod(validDirections)
+        if direction == self.direction * -1:
+            self.timeSinceSwitch = 0
 
         return direction
 
     def behaviorTree(self):
         top_node = Selector(
             [
-                Sequence([BerserkMode(self), Kill(self)]),
-                Sequence([GhostClose(self), PowerPelletClose(self), GetPowerPellets(self)]),
-                Sequence([GhostClose(self), Flee(self)]),
-                Sequence([WanderForPellets(self)]),
-                Wander(self)
+                Sequence([BerserkMode(self, 200), Kill(self)]),
+                Sequence([GhostWillCollide(self), GhostClose(self, 60), Reverse(self)]),
+                Sequence([GhostClose(self, 100), PowerPelletClose(self, 120), GetPowerPellets(self)]),
+                Sequence([GhostClose(self, 120), Flee(self)]),
+                Sequence([WanderForPellets(self)])
             ]
         )
         top_node.run()
@@ -116,10 +130,10 @@ class Pacman(Entity):
             return True
         return False
 
-    def validDirections(self):
+    def validDirections(self, useTarget=False):
         directions = []
         for key in [UP, DOWN, LEFT, RIGHT]:
-            if self.validDirection(key):
+            if self.validDirection(key, useTarget):
                 if key != self.direction * -1:
                     directions.append(key)
         if len(directions) == 0:
@@ -137,7 +151,7 @@ class Pacman(Entity):
             if dist < closestDistance:
                 closestGhost = self.ghosts[i]
                 closestDistance = dist
-        return (closestGhost, closestDistance)
+        return closestGhost, closestDistance
 
     def closestPelletWithDistance(self, powerpellet=False):
         closestPellets = None
@@ -148,8 +162,7 @@ class Pacman(Entity):
 
         for i in range(len(pellets)):
             node = self.nodes.getNodeFromPixels(pellets[i].position.x, pellets[i].position.y)
-            if (pellets[i] not in pellets or
-                    node is None):
+            if pellets[i] not in self.pellets or node is None:
                 continue
             distV = self.position - pellets[i].position
             dist = distV.magnitude()
@@ -171,9 +184,15 @@ class Pacman(Entity):
         # print(f"Path: {path}")
         return path, cost
 
-    def getGhostDirection(self, directions):
-        closest_ghost, distance = self.closestGhostAndDistance()
-        ghost_node = self.nodes.getNodeFromPixels(closest_ghost.target.position.x, closest_ghost.target.position.y)
+    def getReverseDirection(self, directions):
+        if self.timeSinceSwitch > 3:
+            return self.direction * -1
+        return choice(directions)
+
+    def getGhostDirection(self, directions, ghost=None):
+        if ghost is None:
+            ghost, _ = self.closestGhostAndDistance()
+        ghost_node = self.nodes.getNodeFromPixels(ghost.target.position.x, ghost.target.position.y)
         return self.getDirectionToGoal(directions, ghost_node)
 
     def getPowerPelletDirection(self, directions):
@@ -185,13 +204,14 @@ class Pacman(Entity):
         closest_pellet, distance = self.closestPelletWithDistance(False)
         pp_node = self.nodes.getNodeFromPixels(closest_pellet.position.x, closest_pellet.position.y)
         direction = self.getDirectionToGoal(directions, pp_node)
-        print(f"Chosen wander direction: {direction}")
+        # print(f"Chosen wander direction: {direction}")
         return direction
 
     def getDirectionToGoal(self, directions, goal):
         sourceNode = self.target
         paths_from_pacman = non_fucked_dijkstra(self.nodes, sourceNode)
         path_to_goal, length = self.extractPathTo(paths_from_pacman, sourceNode, goal)
+
         best_target = path_to_goal[0]
         if len(path_to_goal) > 1:
             best_target = path_to_goal[1]
@@ -204,70 +224,49 @@ class Pacman(Entity):
 
         return choice(directions)
 
-    def getDirectionAwayFromGhosts(self, directions, prioritizePellets=False):
-        dangerous_directions = self.getGhostTargetDirections(7)
 
-        if self.direction in dangerous_directions:
-            rndNm = random.randrange(0, 3)
-            if rndNm == 1:
-                directions.append(self.direction * -1)
+    def getDirectionAwayFromGhosts(self, directions, prioritizePellets=False):
+        dangerous_directions = self.getGhostTargetDirections(directions, 3)
 
         good_directions = []
         for direction in directions:
             if direction not in dangerous_directions:
                 good_directions.append(direction)
 
+        # print(f"------")
+        # print(f"all dirs: {directions}")
+        # print(f"good dirs: {good_directions}")
+        # print(f"bad dirs: {dangerous_directions}")
+
         if len(good_directions) == 0:
-            print("No good directions to pick")
+            # if self.timeSinceSwitch > 5:
+            #     return self.direction * -1
             return choice(directions)
 
-        print(f"good dirs: {good_directions}")
-        print(f"bad dirs: {dangerous_directions}")
         pelletDirection = self.getPelletDirection(directions)
         if pelletDirection in good_directions:
-            print("cash money")
-            good_directions.append(pelletDirection)  # bigger chance
+            good_directions = [pelletDirection]
 
         return choice(good_directions)
 
     # Returns pacman's directions to all nodes which ghosts are targeting
-    def getGhostTargetDirections(self, path_limit=5):
-        # print(f"No. of nodes: {len(self.nodes.getListOfNodesVector())}")
-
+    def getGhostTargetDirections(self, directions, path_limit=5):
+        dangerous_directions = []
         sourceNode = self.target
         paths_from_pacman = non_fucked_dijkstra(self.nodes, sourceNode)
-
-        dangerous_directions = []
+        # paths_from_pacman = non_fucked_dijkstra(self.nodes, sourceNode)
 
         g, d = self.closestGhostAndDistance()
-
         for ghost in self.ghosts:
-            ghostPosition = ghost.target.position
-            # ghostDistanceToTarget = (self.target.position - ghostPosition).magnitudeSquared()
-            # pacmanDistanceToTarget = (self.target.position - self.position).magnitudeSquared()
-            # print(ghostDistanceToTarget)
-            # if ghostDistanceToTarget <= pacmanDistanceToTarget:
-            #     if 20000 > pacmanDistanceToTarget:
-            #         dangerous_directions.append(self.direction)
-            #         print(f"Ghost is closer to target than pacman")
-            #         continue
-
-            goalNode = self.nodes.getNodeFromPixels(ghostPosition.x, ghostPosition.y)
-            path_to_ghost, length = self.extractPathTo(paths_from_pacman, sourceNode, goalNode)
-
-            pathLength = len(path_to_ghost)
-            if pathLength > path_limit:
-                continue
-            if pathLength < 2:
-                dangerous_directions.append(self.direction)
-                continue
-            else:
-                dangerous_neighbor = path_to_ghost[1]
-
-            for neighborKey in self.target.neighbors.keys():
-                neighborNode = self.target.neighbors[neighborKey]
-                if neighborNode is not None and neighborNode.position == dangerous_neighbor.position:
-                    dangerous_directions.append(neighborKey)
-                    break
-
+            ghost_node = self.nodes.getNodeFromPixels(ghost.target.position.x, ghost.target.position.y)
+            path_to_goal, length = self.extractPathTo(paths_from_pacman, sourceNode, ghost_node)
+            if length < 5:
+                best_target = path_to_goal[0]
+                if len(path_to_goal) > 1:
+                    best_target = path_to_goal[1]
+                for neighborKey in self.target.neighbors.keys():
+                    if neighborKey in directions:
+                        neighborNode = self.target.neighbors[neighborKey]
+                        if neighborNode is not None and neighborNode.position == best_target.position:
+                            dangerous_directions.append(neighborKey)
         return dangerous_directions
