@@ -23,6 +23,10 @@ class Node(object):
     def render(self, screen):
         for n in self.neighbors.keys():
             if self.neighbors[n] is not None:
+
+                if self.position == Vector2(16, 464):
+                    pygame.draw.circle(screen, PINK, self.position.asInt(), 36)
+
                 line_start = self.position.asTuple()
                 line_end = self.neighbors[n].position.asTuple()
                 pygame.draw.line(screen, WHITE, line_start, line_end, 4)
@@ -201,9 +205,10 @@ class NodeGroup(object):
         return list_neighs
 
     def get_costs(self):
-        costs_dict = {}
+        costs_dic = {}
         listOfNodesPixels = self.getListOfNodesVector()
         for node in listOfNodesPixels:
+            pixels = self.getNodeFromPixels(node[0], node[1])
             neigh = self.getNeighborsObj(node)
             temp_neighs = neigh.values()
             temp_list = []
@@ -212,5 +217,8 @@ class NodeGroup(object):
                     temp_list.append(1)
                 else:
                     temp_list.append(None)
-            costs_dict[node] = temp_list
-        return costs_dict
+            costs_dic[node] = temp_list
+        # print(costs_dic)
+        return costs_dic
+
+
