@@ -98,14 +98,7 @@ class GhostWillCollide(Task):
     def run(self):
         for ghost in self.pac.ghosts:
             if ghost.target == self.pac.target and ghost.node != self.pac.node:
-                print("noooo they will collide!!!!!!!")
                 return True
-                ghostDistance = (self.pac.target.position - ghost.position).magnitude()
-                pacmanDistance = (self.pac.target.position - self.pac.position).magnitude()
-                print(ghostDistance - pacmanDistance)
-                if ghostDistance < pacmanDistance:
-                    print("noooo they will collide!!!!!!!")
-                    return True
         return False
 
 

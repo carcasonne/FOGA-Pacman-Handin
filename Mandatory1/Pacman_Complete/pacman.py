@@ -233,14 +233,7 @@ class Pacman(Entity):
             if direction not in dangerous_directions:
                 good_directions.append(direction)
 
-        # print(f"------")
-        # print(f"all dirs: {directions}")
-        # print(f"good dirs: {good_directions}")
-        # print(f"bad dirs: {dangerous_directions}")
-
         if len(good_directions) == 0:
-            # if self.timeSinceSwitch > 5:
-            #     return self.direction * -1
             return choice(directions)
 
         pelletDirection = self.getPelletDirection(directions)
@@ -254,9 +247,7 @@ class Pacman(Entity):
         dangerous_directions = []
         sourceNode = self.target
         paths_from_pacman = non_fucked_dijkstra(self.nodes, sourceNode)
-        # paths_from_pacman = non_fucked_dijkstra(self.nodes, sourceNode)
-
-        g, d = self.closestGhostAndDistance()
+        
         for ghost in self.ghosts:
             ghost_node = self.nodes.getNodeFromPixels(ghost.target.position.x, ghost.target.position.y)
             path_to_goal, length = self.extractPathTo(paths_from_pacman, sourceNode, ghost_node)
